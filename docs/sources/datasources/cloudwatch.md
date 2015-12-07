@@ -24,7 +24,8 @@ Name | Description
 ------------ | -------------
 Name | The data source name, important that this is the same as in Grafana v1.x if you plan to import old dashboards.
 Default | Default data source means that it will be pre-selected for new panels.
-Default-Region | Used in query editor to set region (can be changed on per query basis)
+Credentials profile name | Specify the name of the profile to use (if you use `~/aws/credentials` file), leave blank for default. This option was introduced in Grafana 2.5.1
+Default Region | Used in query editor to set region (can be changed on per query basis)
 
 ## Authentication
 
@@ -53,6 +54,20 @@ Example content:
 
 You need to specify a namespace, metric, at least one stat, and at least one dimension.
 
+## Templated queries
+CloudWatch Datasource Plugin provides the following functions in `Variables values query` field in Templating Editor to query `region`, `namespaces`, `metric names` and `dimension keys/values` on the CloudWatch.
+
+Name | Description
+------- | --------
+`regions()` | Returns a list of regions AWS provides their service.
+`namespaces()` | Returns a list of namespaces CloudWatch support.
+`metrics(namespace)` | Returns a list of metrics in the namespace.
+`dimension_keys(namespace)` | Returns a list of dimension keys in the namespace.
+`dimension_values(region, namespace, metric, dimension_key)` | Returns a list of dimension values matching the specified `region`, `namespace`, `metric` and `dimension_key`.
+
+For details about the metrics CloudWatch provides, please refer to the [CloudWatch documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/CW_Support_For_AWS.html).
+
+![](/img/v2/cloudwatch_templating.png)
 
 ## Cost
 
