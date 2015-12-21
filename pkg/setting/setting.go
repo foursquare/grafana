@@ -82,6 +82,7 @@ var (
 	AutoAssignOrg      bool
 	AutoAssignOrgRole  string
 	VerifyEmailEnabled bool
+	LoginHint          string
 
 	// Http auth
 	AdminUser     string
@@ -432,6 +433,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	AutoAssignOrg = users.Key("auto_assign_org").MustBool(true)
 	AutoAssignOrgRole = users.Key("auto_assign_org_role").In("Editor", []string{"Editor", "Admin", "Read Only Editor", "Viewer"})
 	VerifyEmailEnabled = users.Key("verify_email_enabled").MustBool(false)
+	LoginHint = users.Key("login_hint").String()
 
 	// anonymous access
 	AnonymousEnabled = Cfg.Section("auth.anonymous").Key("enabled").MustBool(false)
@@ -568,6 +570,14 @@ func initLogging(args *CommandLineArgs) {
 				"level":  level,
 				"driver": sec.Key("driver").String(),
 				"conn":   sec.Key("conn").String(),
+			}
+		case "syslog":
+			LogConfigs[i] = util.DynMap{
+				"level":    level,
+				"network":  sec.Key("network").MustString(""),
+				"address":  sec.Key("address").MustString(""),
+				"facility": sec.Key("facility").MustString("local7"),
+				"tag":      sec.Key("tag").MustString(""),
 			}
 		}
 

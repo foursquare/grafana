@@ -41,6 +41,7 @@ type DataSource struct {
 	BasicAuth         bool
 	BasicAuthUser     string
 	BasicAuthPassword string
+	WithCredentials   bool
 	IsDefault         bool
 	JsonData          map[string]interface{}
 
@@ -84,6 +85,7 @@ type AddDataSourceCommand struct {
 	BasicAuth         bool                   `json:"basicAuth"`
 	BasicAuthUser     string                 `json:"basicAuthUser"`
 	BasicAuthPassword string                 `json:"basicAuthPassword"`
+	WithCredentials   bool                   `json:"withCredentials"`
 	IsDefault         bool                   `json:"isDefault"`
 	JsonData          map[string]interface{} `json:"jsonData"`
 
@@ -104,6 +106,7 @@ type UpdateDataSourceCommand struct {
 	BasicAuth         bool                   `json:"basicAuth"`
 	BasicAuthUser     string                 `json:"basicAuthUser"`
 	BasicAuthPassword string                 `json:"basicAuthPassword"`
+	WithCredentials   bool                   `json:"withCredentials"`
 	IsDefault         bool                   `json:"isDefault"`
 	JsonData          map[string]interface{} `json:"jsonData"`
 
