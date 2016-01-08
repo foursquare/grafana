@@ -2,13 +2,12 @@ define([
   'angular',
   'lodash',
   'jquery',
-  'config',
   'app/core/utils/datemath',
   'moment',
   './directives',
   './query_ctrl',
 ],
-function (angular, _, $, config, dateMath, moment) {
+function (angular, _, $, dateMath, moment) {
   'use strict';
 
   var module = angular.module('grafana.services');
