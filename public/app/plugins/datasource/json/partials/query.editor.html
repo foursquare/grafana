@@ -16,15 +16,9 @@
 					<i class="fa fa-bars"></i>
 				</a>
 				<ul class="dropdown-menu pull-right" role="menu">
-					<li role="menuitem">
-						<a tabindex="1" ng-click="duplicateDataQuery(target)">Duplicate</a>
-					</li>
-					<li role="menuitem">
-						<a tabindex="1" ng-click="moveDataQuery($index, $index-1)">Move up</a>
-					</li>
-					<li role="menuitem">
-						<a tabindex="1" ng-click="moveDataQuery($index, $index+1)">Move down</a>
-					</li>
+					<li role="menuitem"><a tabindex="1" ng-click="duplicateDataQuery(target)">Duplicate</a></li>
+					<li role="menuitem"><a tabindex="1" ng-click="moveDataQuery($index, $index-1)">Move up</a></li>
+					<li role="menuitem"><a tabindex="1" ng-click="moveDataQuery($index, $index+1)">Move down</a></li>
 				</ul>
 			</div>
 		</li>
@@ -47,17 +41,15 @@
 		</li>
 	</ul>
 
-  <ul class="tight-form-list">
+  <ul class="tight-form-list" ng-repeat="templateVar in datasource.templateVars">
     <li class="tight-form-item" style="min-width: 15px; text-align: center">
-      Endpoint:
+      {{templateVar.name}}
     </li>
     <li class="tight-form-item">
-      <select class="tight-form-input input-large" ng-model="target.target">
-        <option ng-repeat="(name, endpoint) in datasource.endpoints" value="{{name}}">{{name}}</option>
-      </select>
+      <input type="text" class="tight-form-input input-xlarge" ng-model="target.jsonTemplateVars[templateVar.name]" placeholder=""></input>
     </li>
   </ul>
 
-	<div class="clearfix"></div>
+  <div class="clearfix"></div>
 
 </div>

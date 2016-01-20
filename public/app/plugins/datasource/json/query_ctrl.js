@@ -8,9 +8,9 @@ function (angular) {
 
   module.controller('JsonQueryCtrl', ['$scope', function($scope) {
     $scope.init = function() {
-      window.qs = $scope;
       if ($scope.target) {
         $scope.target.target = $scope.target.target || '';
+        $scope.target.jsonTemplateVars = $scope.target.jsonTemplateVars || {};
       }
     };
 

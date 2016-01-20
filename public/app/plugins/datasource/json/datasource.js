@@ -11,47 +11,30 @@ function (angular, _) {
 
   module.factory('JsonDatasource', ['$q', '$http', 'backendSrv', 'templateSrv', function($q, $http, backendSrv, templateSrv) {
     function JsonDatasource(datasource) {
-      var self = this;
-
-      console.log({datasource: datasource});
+      this.name = datasource.name;
       this.url = datasource.url;
-      this.endpointsList = datasource.jsonData.endpoints;
+      this.basicAuth = datasource.basicAuth;
+      this.withCredentials = datasource.withCredentials;
 
-      this.endpoints = {};
-      _.each(this.endpointsList, function(endpoint) {
-        self.endpoints[endpoint.name] = endpoint;
-      });
+      this.path = datasource.jsonData.jsonPath;
+      this.method = datasource.jsonData.jsonMethod;
+      this.timeFormat = datasource.jsonData.jsonTimeFormat;
+      this.templateVars = datasource.jsonData.jsonTemplateVars;
     }
 
-    JsonDatasource.prototype._endpointRequest = function(endpoint, context) {
-      if (endpoint.access === "direct") {
-        var options = {
-          url: templateSrv.replace(endpoint.url, context),
-          method: endpoint.method || 'GET',
-        };
+    JsonDatasource.prototype._request = function(options) {
+      options.url = this.url + options.url;
+      options.method = options.method || 'GET';
+      options.inspect = { 'type': 'json_datasource' };
 
-        if (endpoint.basicAuth) {
-          options.withCredentials = true;
-          options.headers = {
-            "Authorization": this.basicAuth
-          };
-        }
-
-        console.log({options: options});
-        return $http(options);
-      } else if (endpoint.access === "proxy") {
-        var simpleContext = {};
-        _.each(context, function(value, key) {
-          simpleContext[key] = value.value.toString();
-        });
-        var data = {
-          name: endpoint.name,
-          context: simpleContext
+      if (this.basicAuth) {
+        options.withCredentials = true;
+        options.headers = {
+          "Authorization": this.basicAuth
         };
-        return backendSrv.post(this.url, data);
-      } else {
-        return $q.reject("Unknown access mode: " + endpoint.access);
       }
+
+      return backendSrv.datasourceRequest(options);
     };
 
     JsonDatasource.prototype.convertTimeValue = function(when, whenType) {
@@ -73,22 +56,26 @@ function (angular, _) {
       var self = this;
 
       var targetPromises = _(queryOptions.targets)
-        .filter(function(target) { return target.target.length > 0 && !target.hide; })
+        .filter(function(target) { return !target.hide; })
         .map(function(target) {
-          var endpoint = self.endpoints[target.target];
-          var from = self.convertTimeValue(queryOptions.range.from, endpoint.timeFormat);
-          var to = self.convertTimeValue(queryOptions.range.to, endpoint.timeFormat);
           var context = {
-            from: {value: from},
-            to: {value: to},
+            from: {value: self.convertTimeValue(queryOptions.range.from, self.timeFormat)},
+            to: {value: self.convertTimeValue(queryOptions.range.to, self.timeFormat)},
           };
-          return self._endpointRequest(endpoint, context);
+          _.each(self.templateVars, function(templateVar) {
+            context[templateVar.name] = {value: target.jsonTemplateVars[templateVar.name]};
+          });
+
+          var options = {
+            url: templateSrv.replace(self.path, context),
+            method: self.method || 'GET',
+          };
+
+          return self._request(options);
         })
         .value();
 
       return $q.all(targetPromises).then(function(responses) {
-        console.log({responses: responses});
-
         var result = {data: []};
         _.each(responses, function(response) {
           _.each(response.data.data, function(timeseries) {
