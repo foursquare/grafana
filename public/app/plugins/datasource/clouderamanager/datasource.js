@@ -21,6 +21,13 @@ function (angular, _, $, dateMath, moment) {
       this.basicAuth = datasource.basicAuth;
       this.withCredentials = datasource.withCredentials;
       this.name = datasource.name;
+
+      this.apiVersion = 4;
+      if (datasource.jsonData.cmAPIVersion === 'v6-10') {
+        this.apiVersion = 6;
+      } else if (datasource.jsonData.cmAPIVersion === 'v11+') {
+        this.apiVersion = 11;
+      }
     }
 
     // Helper to make API requests to Cloudera Manager. To avoid CORS issues, the requests may be proxied
@@ -68,14 +75,18 @@ function (angular, _, $, dateMath, moment) {
         .filter(function(target) { return target.target && !target.hide; })
         .map(function(target) {
           var requestOptions = {
-            url: '/api/v10/timeseries',
+            url: '/api/v' + self.apiVersion + '/timeseries',
             params: {
               query: target.target,
               from: queryOptions.range.from.toJSON(),
               to: queryOptions.range.to.toJSON(),
-              contentType: 'application/json',
             }
           };
+
+          if (self.apiVersion >= 6) {
+            requestOptions.params.contentType = 'application/json';
+          }
+
           return self._request(requestOptions).then(_.bind(self.convertResponse, self));
         })
         .value();
