@@ -76,7 +76,7 @@ function (angular, _, $, dateMath, moment) {
               contentType: 'application/json',
             }
           };
-          return self._request(requestOptions).then(self.convertResponse);
+          return self._request(requestOptions).then(_.bind(self.convertResponse, self));
         })
         .value();
 
@@ -89,6 +89,19 @@ function (angular, _, $, dateMath, moment) {
         result.data = _.flatten(result.data);
         return result;
       });
+    };
+
+    // Convert the metadata returned from Cloudera Manager into the timeseries name for Grafana.
+    ClouderaManagerDatasource.prototype._makeTimeseriesName = function(metadata) {
+      if (metadata.metricName && metadata.entityName) {
+        return metadata.metricName + ' (' + metadata.entityName  + ')';
+      } else if (metadata.metricName) {
+        return metadata.metricName;
+      } else if (metadata.entityName) {
+        return metadata.entityName;
+      } else {
+        return 'UNKNOWN NAME';
+      }
     };
 
     // Convert the Cloudera Manager response to the format expected by Grafana.
@@ -109,22 +122,35 @@ function (angular, _, $, dateMath, moment) {
     //     {
     //       metadata: {
     //         metricName: "metricName1",
+    //         entityName: "entityName1",
+    //         ...
     //       },
-    //       timeSeries: {
-    //         value: 45.1234,
-    //         timestamp: "2015-10-02T12:58:24.009Z",
-    //       }
+    //       data: [
+    //         {
+    //           value: 45.1234,
+    //           timestamp: "2015-10-02T12:58:24.009Z",
+    //           ...
+    //         }, {
+    //           value: 98.7654,
+    //           timestamp: "2015-10-02T12:59:24.009Z",
+    //           ...
+    //         }
+    //         ... (more datapoints)
+    //       ]
     //     }
+    //     ... (more timeseries)
     //   ]
     // }
     ClouderaManagerDatasource.prototype.convertResponse = function(response) {
+      var self = this;
+
       if (!response || !response.data || !response.data.items) { return []; }
 
       var seriesList = [];
       _(response.data.items).forEach(function(item) {
         _.forEach(item.timeSeries, function(timeSeries) {
           seriesList.push({
-            target: timeSeries.metadata.metricName,
+            target: self._makeTimeseriesName(timeSeries.metadata),
             datapoints: _.map(timeSeries.data, function(point) {
               var ts = moment.utc(dateMath.parse(point.timestamp)).unix() * 1000;
               return [point.value, ts];
