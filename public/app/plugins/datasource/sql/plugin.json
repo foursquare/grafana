@@ -1,6 +1,6 @@
 {
   "pluginType": "datasource",
-  "name": "Generic SQL (prototype)",
+  "name": "Generic SQL",
 
   "type": "generic_sql",
   "serviceName": "SqlDatasource",

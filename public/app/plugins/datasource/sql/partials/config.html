@@ -6,18 +6,18 @@
 			DB Type
 		</li>
 		<li>
-			<select class="input-medium tight-form-input" ng-model="current.jsonData.dbType" ng-options="f for f in ['sqlite3','mysql','postgres']"></select>
+			<select class="input-medium tight-form-input" ng-model="current.jsonData.sqlDBType" ng-options="f for f in ['sqlite3', 'mysql', 'postgres']"></select>
 		</li>
 		<li class="tight-form-item" style="width: 80px">
 			Host
 		</li>
 		<li>
-			<input type="text" class="tight-form-input input-medium" ng-model='current.jsonData.host' placeholder="localhost:3306">
+			<input type="text" class="tight-form-input input-medium" ng-model='current.jsonData.sqlHost' placeholder="localhost:3306">
 		</li>
-		<li class="tight-form-item" ng-if="current.jsonData.dbType === 'postgres'">
+		<li class="tight-form-item" ng-if="current.jsonData.sqlDBType === 'postgres'">
 			SSL&nbsp;
-			<input class="cr1" id="jsonData.ssl" type="checkbox" ng-model="current.jsonData.ssl" ng-checked="current.jsonData.ssl">
-			<label for="jsonData.ssl" class="cr1"></label>
+			<input class="cr1" id="jsonData.sqlSsl" type="checkbox" ng-model="current.jsonData.sqlSsl" ng-checked="current.jsonData.sqlSsl">
+			<label for="jsonData.sqlSsl" class="cr1"></label>
 		</li>
 	</ul>
 	<div class="clearfix"></div>
