@@ -104,7 +104,9 @@ function (angular, _, $, dateMath, moment) {
 
     // Convert the metadata returned from Cloudera Manager into the timeseries name for Grafana.
     ClouderaManagerDatasource.prototype._makeTimeseriesName = function(metadata) {
-      if (metadata.metricName && metadata.entityName) {
+      if (metadata.alias) {
+        return metadata.alias;
+      } else if (metadata.metricName && metadata.entityName) {
         return metadata.metricName + ' (' + metadata.entityName  + ')';
       } else if (metadata.metricName) {
         return metadata.metricName;
