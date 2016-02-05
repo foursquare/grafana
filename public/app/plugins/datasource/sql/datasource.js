@@ -12,7 +12,6 @@ function (angular, _) {
   module.factory('SqlDatasource', function($q, backendSrv) {
 
     function SqlDatasource(datasource) {
-      console.log({datasource: datasource});
       this.url = datasource.url;
     }
 
@@ -45,7 +44,6 @@ function (angular, _) {
         .value();
 
       return $q.all(targetPromises).then(function(responses) {
-        console.log({responses: responses});
         var result = {
           data: _.map(responses, function(response) {
             return response.data;
@@ -55,8 +53,6 @@ function (angular, _) {
         return result;
       });
     };
-
-    console.log({proto: SqlDatasource.prototype});
 
     return SqlDatasource;
   });

@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/middleware"
 	m "github.com/grafana/grafana/pkg/models"
-	"github.com/grafana/grafana/pkg/util"
+	// "github.com/grafana/grafana/pkg/util"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
@@ -70,32 +71,118 @@ func getEngine(ds *m.DataSource) (*xorm.Engine, error) {
 	return xorm.NewEngine(dbType, cnnstr)
 }
 
-func query(db *core.DB, sql string, from int64, to int64) (interface{}, error) {
+type datapointStruct struct {
+	Timestamp time.Time
+	Value float64
+	IsNull bool
+}
+
+type timeseriesStruct struct {
+	Name string
+	Datapoints []datapointStruct
+}
+
+func decodeTimestamp(rawTimestamp interface{}) (time.Time, error) {
+	if rawTimestamp == nil {
+		return time.Unix(0, 0), errors.New("Timestamp must not be NULL")
+	}
+
+	switch rawTimestamp.(type) {
+	case time.Time:
+		return rawTimestamp.(time.Time), nil
+
+	case int64:
+		return time.Unix(rawTimestamp.(int64), 0), nil
+
+	default:
+		return time.Unix(0, 0), errors.New("Invalid timestamp format")
+	}
+}
+
+func decodeValue(rawValue interface{}) (float64, bool, error) {
+	if rawValue == nil {
+		return 0, false, nil
+	}
+
+	switch rawValue.(type) {
+	case float64:
+		return rawValue.(float64), true, nil
+
+	case int64:
+		return float64(rawValue.(int64)), true, nil
+
+	default:
+		return 0.0, false, errors.New("Invalid value format")
+	}
+
+}
+
+func query(db *core.DB, sql string, from int64, to int64) ([]timeseriesStruct, error) {
 	rawRows, err := db.Query(sql, from, to)
 	if err != nil {
 		return nil, err
 	}
 	defer rawRows.Close()
 
-	rows := make([][]float64, 0)
+	columnNames, err := rawRows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(columnNames) <= 1 {
+		return nil, errors.New("The query only returned a single column.")
+	}
+
+	allTimeseries := make([]timeseriesStruct, len(columnNames) - 1)
+	for i, _ := range allTimeseries {
+		allTimeseries[i].Name = columnNames[i + 1]
+		allTimeseries[i].Datapoints = make([]datapointStruct, 0)
+	}
 
 	var count = 0
+	fields := make([]interface{}, len(columnNames))
+
 	for rawRows.Next() {
 		count += 1
 
-		var ts int64
-		var value float64
-		err = rawRows.Scan(&ts, &value)
+		err = rawRows.ScanSlice(&fields)
 		if err != nil {
 			return nil, err
 		}
 
-		rows = append(rows, []float64{value, float64(ts) * 1000.0})
+		var timestamp time.Time
+		timestamp, err = decodeTimestamp(fields[0])
+		if err != nil {
+			return nil, err
+		}
+
+		for i, _ := range allTimeseries {
+			var value float64
+			var isSet bool
+
+			value, isSet, err = decodeValue(fields[i + 1])
+			if err != nil {
+				return nil, err
+			}
+
+			if isSet {
+				datapoint := datapointStruct{timestamp, value, false}
+				allTimeseries[i].Datapoints = append(allTimeseries[i].Datapoints, datapoint)
+			} else {
+				datapoint := datapointStruct{timestamp, 0.0, true}
+				allTimeseries[i].Datapoints = append(allTimeseries[i].Datapoints, datapoint)
+			}
+		}
 	}
 
 	log.Info("Found %d rows.", count)
 
-	return rows, nil
+	return allTimeseries, nil
+}
+
+type convertedTimeseriesStruct struct {
+	Target string `json:"target"`
+	Datapoints []interface{} `json:"datapoints"`
 }
 
 func HandleRequest(c *middleware.Context, ds *m.DataSource) {
@@ -117,14 +204,29 @@ func HandleRequest(c *middleware.Context, ds *m.DataSource) {
 
 	db := session.DB()
 
-	datapoints, err := query(db, req.Query, req.From, req.To)
+	allTimeseries, err := query(db, req.Query, req.From, req.To)
 	if err != nil {
-		c.JsonApiErr(500, "Data error", err)
+		c.JsonApiErr(500, fmt.Sprintf("Data error: %v", err.Error()), err)
 		return
 	}
 
-	c.JSON(200, &util.DynMap{
-		"target": "foo",
-		"datapoints": datapoints,
-	})
+	// Convert the timeseries into the JSON form required by the Grafana frontend.
+	convertedAllTimeseries := make([]convertedTimeseriesStruct, 0)
+	for _, timeseries := range allTimeseries {
+		convertedTimeseries := convertedTimeseriesStruct{}
+		convertedTimeseries.Target = timeseries.Name
+		convertedTimeseries.Datapoints = make([]interface{}, 0)
+		for _, datapoint := range timeseries.Datapoints {
+			timestamp := datapoint.Timestamp.UnixNano() / 1000.0 / 1000.0
+			if datapoint.IsNull {
+				convertedTimeseries.Datapoints = append(convertedTimeseries.Datapoints, []interface{}{nil, timestamp})
+			} else {
+				convertedTimeseries.Datapoints = append(convertedTimeseries.Datapoints, []interface{}{datapoint.Value, timestamp})
+			}
+		}
+
+		convertedAllTimeseries = append(convertedAllTimeseries, convertedTimeseries)
+	}
+
+	c.JSON(200, convertedAllTimeseries)
 }
