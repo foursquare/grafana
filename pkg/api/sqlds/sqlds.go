@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"time"
 
@@ -94,8 +95,11 @@ func decodeTimestamp(rawTimestamp interface{}) (time.Time, error) {
 	case int64:
 		return time.Unix(rawTimestamp.(int64), 0), nil
 
+	case float64:
+		return time.Unix(int64(rawTimestamp.(float64)), 0), nil
+
 	default:
-		return time.Unix(0, 0), errors.New("Invalid timestamp format")
+		return time.Unix(0, 0), fmt.Errorf("Invalid type for timestamp: %v", reflect.TypeOf(rawTimestamp))
 	}
 }
 
