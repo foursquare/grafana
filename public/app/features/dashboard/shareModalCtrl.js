@@ -1,5 +1,4 @@
-define([
-  'angular',
+define(['angular',
   'lodash',
   'require',
   'app/core/config',
@@ -12,7 +11,7 @@ function (angular, _, require, config) {
   module.controller('ShareModalCtrl', function($scope, $rootScope, $location, $timeout, timeSrv, $element, templateSrv, linkSrv) {
 
     $scope.options = { forCurrent: true, includeTemplateVars: true, theme: 'current' };
-    $scope.editor = { index: 0 };
+    $scope.editor = { index: $scope.tabIndex || 0};
 
     $scope.init = function() {
       $scope.modeSharePanel = $scope.panel ? true : false;
@@ -26,7 +25,7 @@ function (angular, _, require, config) {
         $scope.modalTitle = 'Share Dashboard';
       }
 
-      if (!$scope.dashboardMeta.isSnapshot) {
+      if (!$scope.dashboard.meta.isSnapshot) {
         $scope.tabs.push({title: 'Snapshot sharing', src: 'shareSnapshot.html'});
       }
 
@@ -71,7 +70,8 @@ function (angular, _, require, config) {
       $scope.shareUrl = linkSrv.addParamsToUrl(baseUrl, params);
 
       var soloUrl = $scope.shareUrl;
-      soloUrl = soloUrl.replace('/dashboard/', '/dashboard-solo/');
+      soloUrl = soloUrl.replace(config.appSubUrl + '/dashboard/', config.appSubUrl + '/dashboard-solo/');
+      soloUrl = soloUrl.replace("&fullscreen", "");
 
       $scope.iframeHtml = '<iframe src="' + soloUrl + '" width="450" height="200" frameborder="0"></iframe>';
 

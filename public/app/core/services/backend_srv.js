@@ -7,7 +7,7 @@ define([
 function (angular, _, coreModule, config) {
   'use strict';
 
-  coreModule.service('backendSrv', function($http, alertSrv, $timeout) {
+  coreModule.default.service('backendSrv', function($http, alertSrv, $timeout) {
     var self = this;
 
     this.get = function(url, params) {
@@ -103,6 +103,13 @@ function (angular, _, coreModule, config) {
             options.retry = 1;
             return self.datasourceRequest(options);
           });
+        }
+
+        //populate error obj on Internal Error
+        if (_.isString(err.data) && err.status === 500) {
+          err.data = {
+            error: err.statusText
+          };
         }
 
         // for Prometheus

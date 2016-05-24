@@ -1,6 +1,6 @@
 ///<reference path="../../../headers/common.d.ts" />
 
-import _ = require('lodash');
+import _ from 'lodash';
 
 var index = [];
 var categories = {
@@ -126,9 +126,7 @@ function addMathStrategy(selectParts, partModel) {
     if (selectParts[partCount-2].def.type === 'math') {
       selectParts[partCount-2] = partModel;
       return;
-    }
-    // if last is alias add it before
-    else if (selectParts[partCount-1].def.type === 'alias') {
+    } else if (selectParts[partCount-1].def.type === 'alias') { // if last is alias add it before
       selectParts.splice(partCount-1, 0, partModel);
       return;
     }
@@ -238,6 +236,24 @@ QueryPartDef.register({
   category: categories.Transformations,
   params: [{ name: "duration", type: "interval", options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h']}],
   defaultParams: ['10s'],
+  renderer: functionRenderer,
+});
+
+QueryPartDef.register({
+  type: 'difference',
+  addStrategy: addTransformationStrategy,
+  category: categories.Transformations,
+  params: [],
+  defaultParams: [],
+  renderer: functionRenderer,
+});
+
+QueryPartDef.register({
+  type: 'moving_average',
+  addStrategy: addTransformationStrategy,
+  category: categories.Transformations,
+  params: [{ name: "window", type: "number", options: [5, 10, 20, 30, 40]}],
+  defaultParams: [10],
   renderer: functionRenderer,
 });
 
@@ -399,8 +415,7 @@ class QueryPart {
 
     if (strValue === '' && this.def.params[index].optional) {
       this.params.splice(index, 1);
-    }
-    else {
+    } else {
       this.params[index] = strValue;
     }
 
@@ -421,7 +436,7 @@ class QueryPart {
   }
 }
 
-export = {
+export default {
   create: function(part): any {
     return new QueryPart(part);
   },

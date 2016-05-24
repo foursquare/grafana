@@ -20,9 +20,10 @@ function (_) {
     ],
 
     bucketAggTypes: [
-      {text: "Terms",           value: 'terms' },
+      {text: "Terms",           value: 'terms', requiresField: true},
       {text: "Filters",         value: 'filters' },
-      {text: "Date Histogram",  value: 'date_histogram' },
+      {text: "Geo Hash Grid",        value: 'geohash_grid', requiresField: true},
+      {text: "Date Histogram",  value: 'date_histogram', requiresField: true},
     ],
 
     orderByOptions: [
@@ -73,7 +74,9 @@ function (_) {
         {text: 'window', default: 5},
         {text: 'model', default: 'simple'}
       ],
-      'derivative': []
+      'derivative': [
+        {text: 'unit', default: undefined},
+      ]
     },
 
     getMetricAggTypes: function(esVersion) {
