@@ -1,15 +1,10 @@
 {
-  "pluginType": "datasource",
+  "type": "datasource",
   "name": "Cloudera Manager",
+  "id": "clouderamanager",
 
-  "type": "clouderamanager",
-  "serviceName": "ClouderaManagerDatasource",
-
-  "module": "app/plugins/datasource/clouderamanager/datasource",
-
-  "partials": {
-    "config": "app/plugins/datasource/clouderamanager/partials/config.html"
-  },
+  "module": "plugins/clouderamanager/module",
+  "staticRoot": ".",
 
   "metrics": true,
   "annotations": false

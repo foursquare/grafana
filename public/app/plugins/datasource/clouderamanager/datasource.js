@@ -1,38 +1,45 @@
+// Copyright 2015 Foursquare Labs, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 define([
-  'angular',
   'lodash',
   'jquery',
   'app/core/utils/datemath',
   'moment',
-  './directives',
-  './query_ctrl',
 ],
-function (angular, _, $, dateMath, moment) {
+function(_, $, dateMath, moment) {
   'use strict';
 
-  var module = angular.module('grafana.services');
+  /** @ngInject */
+  function ClouderaManagerDatasource(instanceSettings, $q, backendSrv) {
+    this.url = instanceSettings.url;
+    if (this.url.endsWith('/')) {
+      this.url = this.url.substr(0, this.url.length - 1);
+    }
+    this.basicAuth = instanceSettings.basicAuth;
+    this.withCredentials = instanceSettings.withCredentials;
+    this.name = instanceSettings.name;
 
-  module.factory('ClouderaManagerDatasource', function($q, backendSrv) {
-    function ClouderaManagerDatasource(datasource) {
-      this.url = datasource.url;
-      if (this.url.endsWith('/')) {
-        this.url = this.url.substr(0, this.url.length - 1);
-      }
-      this.basicAuth = datasource.basicAuth;
-      this.withCredentials = datasource.withCredentials;
-      this.name = datasource.name;
-
-      this.apiVersion = 4;
-      if (datasource.jsonData.cmAPIVersion === 'v6-10') {
-        this.apiVersion = 6;
-      } else if (datasource.jsonData.cmAPIVersion === 'v11+') {
-        this.apiVersion = 11;
-      }
+    this.apiVersion = 4;
+    if (instanceSettings.jsonData.cmAPIVersion === 'v6-10') {
+      this.apiVersion = 6;
+    } else if (instanceSettings.jsonData.cmAPIVersion === 'v11+') {
+      this.apiVersion = 11;
     }
 
     // Helper to make API requests to Cloudera Manager. To avoid CORS issues, the requests may be proxied
     // through Grafana's backend via `backendSrv.datasourceRequest`.
-    ClouderaManagerDatasource.prototype._request = function(options) {
+    this._request = function(options) {
       options.url = this.url + options.url;
       options.method = options.method || 'GET';
       options.inspect = { 'type': 'cloudera_manager' };
@@ -48,7 +55,7 @@ function (angular, _, $, dateMath, moment) {
     };
 
     // Test the connection to Cloudera Manager by querying for the supported API version.
-    ClouderaManagerDatasource.prototype.testDatasource = function() {
+    this.testDatasource = function() {
       var options = {
         url: '/api/version',
         transformResponse: function(data) {
@@ -68,23 +75,40 @@ function (angular, _, $, dateMath, moment) {
     // Query for metric targets within the specified time range.
     // Returns the promise of a result dictionary. See the convertResponse comment
     // for specifics of the result dictionary.
-    ClouderaManagerDatasource.prototype.query = function(queryOptions) {
+    this.query = function(queryOptions) {
       var self = this;
 
       var targetPromises = _(queryOptions.targets)
         .filter(function(target) { return target.target && !target.hide; })
         .map(function(target) {
-          var requestOptions = {
-            url: '/api/v' + self.apiVersion + '/timeseries',
-            params: {
-              query: target.target,
-              from: queryOptions.range.from.toJSON(),
-              to: queryOptions.range.to.toJSON(),
-            }
+          var url = '/api/v' + self.apiVersion + '/timeseries';
+          var query = {
+            query: target.target,
+            from: queryOptions.range.from.toJSON(),
+            to: queryOptions.range.to.toJSON(),
           };
 
           if (self.apiVersion >= 6) {
-            requestOptions.params.contentType = 'application/json';
+            query.contentType = 'application/json';
+          }
+
+          var requestOptions;
+          if (self.apiVersion >= 11) {
+            // Use POST method on API versions 11 and higher
+            // Parameters are passed via the body. This allows longer TSQUERY queries.
+            requestOptions = {
+              method: 'POST',
+              url: url,
+              data: query
+            };
+          } else {
+            // Use GET method for API versions prior to 11
+            // Parameters are passed via query string.
+            requestOptions = {
+              method: 'GET',
+              url: url,
+              params: query
+            };
           }
 
           return self._request(requestOptions).then(_.bind(self.convertResponse, self));
@@ -103,7 +127,7 @@ function (angular, _, $, dateMath, moment) {
     };
 
     // Convert the metadata returned from Cloudera Manager into the timeseries name for Grafana.
-    ClouderaManagerDatasource.prototype._makeTimeseriesName = function(metadata) {
+    this._makeTimeseriesName = function(metadata) {
       if (metadata.alias) {
         return metadata.alias;
       } else if (metadata.metricName && metadata.entityName) {
@@ -154,7 +178,7 @@ function (angular, _, $, dateMath, moment) {
     //     ... (more timeseries)
     //   ]
     // }
-    ClouderaManagerDatasource.prototype.convertResponse = function(response) {
+    this.convertResponse = function(response) {
       var self = this;
 
       if (!response || !response.data || !response.data.items) { return []; }
@@ -174,7 +198,9 @@ function (angular, _, $, dateMath, moment) {
 
       return {data: seriesList};
     };
-
-    return ClouderaManagerDatasource;
-  });
+  }
+  
+  return {
+    ClouderaManagerDatasource: ClouderaManagerDatasource,
+  };
 });
