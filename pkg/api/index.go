@@ -36,11 +36,15 @@ func setIndexViewData(c *middleware.Context) (*dtos.IndexViewData, error) {
 			LightTheme:     prefs.Theme == "light",
 			Timezone:       prefs.Timezone,
 		},
-		Settings:           settings,
-		AppUrl:             setting.AppUrl,
-		AppSubUrl:          setting.AppSubUrl,
-		GoogleAnalyticsId:  setting.GoogleAnalyticsId,
-		GoogleTagManagerId: setting.GoogleTagManagerId,
+		Settings:                settings,
+		AppUrl:                  setting.AppUrl,
+		AppSubUrl:               setting.AppSubUrl,
+		GoogleAnalyticsId:       setting.GoogleAnalyticsId,
+		GoogleTagManagerId:      setting.GoogleTagManagerId,
+		BuildVersion:            setting.BuildVersion,
+		BuildCommit:             setting.BuildCommit,
+		NewGrafanaVersion:       plugins.GrafanaLatestVersion,
+		NewGrafanaVersionExists: plugins.GrafanaHasUpdate,
 	}
 
 	if setting.DisableGravatar {
@@ -65,7 +69,7 @@ func setIndexViewData(c *middleware.Context) (*dtos.IndexViewData, error) {
 	if c.OrgRole == m.ROLE_ADMIN || c.OrgRole == m.ROLE_EDITOR {
 		dashboardChildNavs = append(dashboardChildNavs, &dtos.NavLink{Divider: true})
 		dashboardChildNavs = append(dashboardChildNavs, &dtos.NavLink{Text: "New", Icon: "fa fa-plus", Url: setting.AppSubUrl + "/dashboard/new"})
-		dashboardChildNavs = append(dashboardChildNavs, &dtos.NavLink{Text: "Import", Icon: "fa fa-download", Url: setting.AppSubUrl + "/import/dashboard"})
+		dashboardChildNavs = append(dashboardChildNavs, &dtos.NavLink{Text: "Import", Icon: "fa fa-download", Url: setting.AppSubUrl + "/dashboard/new/?editview=import"})
 	}
 
 	data.MainNavLinks = append(data.MainNavLinks, &dtos.NavLink{

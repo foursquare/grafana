@@ -79,7 +79,6 @@ function (angular, _, kbn) {
         else if (variable.refresh === 1 || variable.refresh === 2) {
           return self.updateOptions(variable).then(function() {
             if (_.isEmpty(variable.current) && variable.options.length) {
-              console.log("setting current for %s", variable.name);
               self.setVariableValue(variable, variable.options[0]);
             }
             lock.resolve();
@@ -102,7 +101,10 @@ function (angular, _, kbn) {
       }
 
       return promise.then(function() {
-        var option = _.findWhere(variable.options, { text: urlValue });
+        var option = _.find(variable.options, function(op) {
+          return op.text === urlValue || op.value === urlValue;
+        });
+
         option = option || { text: urlValue, value: urlValue };
 
         self.updateAutoInterval(variable);
@@ -125,8 +127,8 @@ function (angular, _, kbn) {
     this.setVariableValue = function(variable, option, initPhase) {
       variable.current = angular.copy(option);
 
-      if (_.isArray(variable.current.value)) {
-        variable.current.text = variable.current.value.join(' + ');
+      if (_.isArray(variable.current.text)) {
+        variable.current.text = variable.current.text.join(' + ');
       }
 
       self.selectOptionsForCurrentValue(variable);
@@ -166,13 +168,19 @@ function (angular, _, kbn) {
         return;
       }
 
-      // extract options in comma seperated string
+      if (variable.type === 'constant') {
+        variable.options = [{text: variable.query, value: variable.query}];
+        return;
+      }
+
+      // extract options in comma separated string
       variable.options = _.map(variable.query.split(/[,]+/), function(text) {
         return { text: text.trim(), value: text.trim() };
       });
 
       if (variable.type === 'interval') {
         self.updateAutoInterval(variable);
+        return;
       }
 
       if (variable.type === 'custom' && variable.includeAll) {
@@ -224,6 +232,7 @@ function (angular, _, kbn) {
 
     this.selectOptionsForCurrentValue = function(variable) {
       var i, y, value, option;
+      var selected = [];
 
       for (i = 0; i < variable.options.length; i++) {
         option = variable.options[i];
@@ -233,12 +242,16 @@ function (angular, _, kbn) {
             value = variable.current.value[y];
             if (option.value === value) {
               option.selected = true;
+              selected.push(option);
             }
           }
         } else if (option.value === variable.current.value) {
           option.selected = true;
+          selected.push(option);
         }
       }
+
+      return selected;
     };
 
     this.validateVariableSelectionState = function(variable) {
@@ -248,24 +261,25 @@ function (angular, _, kbn) {
       }
 
       if (_.isArray(variable.current.value)) {
-        self.selectOptionsForCurrentValue(variable);
-        // updated selected value
-        var selected = {
-          value: _.map(_.filter(variable.options, {selected: true}), function(op) {
-            return op.value;
-          })
-        };
+        var selected = self.selectOptionsForCurrentValue(variable);
+
         // if none pick first
-        if (selected.value.length === 0) {
+        if (selected.length === 0) {
           selected = variable.options[0];
+        } else {
+          selected = {
+            value: _.map(selected, function(val) {return val.value;}),
+            text: _.map(selected, function(val) {return val.text;}).join(' + '),
+          };
         }
+
         return self.setVariableValue(variable, selected, false);
       } else {
         var currentOption = _.findWhere(variable.options, {text: variable.current.text});
         if (currentOption) {
           return self.setVariableValue(variable, currentOption, false);
         } else {
-          if (!variable.options.length) { return; }
+          if (!variable.options.length) { return $q.when(null); }
           return self.setVariableValue(variable, variable.options[0]);
         }
       }
